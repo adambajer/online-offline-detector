@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Online‑Offline Detector</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Hlavní stránka</h1>
+  <p>Test detekce připojení pomocí Service Worker.</p>
+  <div id="connection-overlay" hidden>
+    <h1 id="status-text">…</h1>
+    <div class="signal-bars">
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    </div>
+    <div>
+      Od: <span id="outage-start">–</span><br>
+      Trvá: <span id="outage-duration">0 s</span>
+    </div>
+    <div class="loader"></div>
+  </div>
+
+  <script>
+    const overlay = document.getElementById('connection-overlay');
+    const statusText = document.getElementById('status-text');
+    const outStart = document.getElementById('outage-start');
+    const outDuration = document.getElementById('outage-duration');
+
+    let outageStart = null, timerID = null;
+
+    function speakSafe(txt) {
+      if (window.speechSynthesis) {
+        const u = new SpeechSynthesisUtterance(txt);
+        u.lang = 'cs-CZ'; u.rate = 1;
+        speechSynthesis.speak(u);
+      }
+    }
+
+    function updateDuration() {
+      const diff = Math.floor((Date.now() - outageStart) / 1000);
+      outDuration.textContent = `${diff} s`;
+    }
+
+    navigator.serviceWorker.register('sw.js');
+
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data?.type !== 'connection-status') return;
+      if (e.data.status === 'disconnected') {
+        outageStart = Date.now();
+        outStart.textContent = new Date(outageStart).toLocaleTimeString('cs-CZ');
+        overlay.hidden = false;
+        overlay.classList.remove('online');
+        statusText.textContent = 'Není signál!';
+        timerID = setInterval(updateDuration, 1000);
+        speakSafe('Ztráta připojení');
+      } else {
+        clearInterval(timerID);
+        const durationSec = Math.floor((Date.now() - outageStart) / 1000);
+        overlay.classList.add('online');
+        statusText.textContent = 'Signál obnoven!';
+        speakSafe(`Spojení obnoveno po ${durationSec} sekundách`);
+        setTimeout(() => overlay.hidden = true, 1500);
+      }
+    });
+  </script>
+</body>
+</html>
