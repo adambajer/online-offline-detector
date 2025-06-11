@@ -1,4 +1,4 @@
-const CHECK_URL = '/ping.txt';
+const CHECK_URL = 'online-offline-detector/ping.txt';
 let isOnline = true;
 
 self.addEventListener('install', () => self.skipWaiting());
